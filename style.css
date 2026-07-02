@@ -1,0 +1,709 @@
+/* ==========================================================================
+   THE FOOD JUDGE - DESIGN SYSTEM & STYLESHEET
+   ========================================================================== */
+
+/* 1. Core Variables & Tokens */
+:root {
+  --bg-primary: #06070a;
+  --bg-secondary: #0c0e16;
+  --color-text-main: #f3f4f6;
+  --color-text-muted: #9ca3af;
+  --accent-gold: #ffcf40;
+  --accent-gold-glow: rgba(255, 207, 64, 0.4);
+  
+  /* Correct (Yes / Pass) */
+  --correct-primary: #00ff88;
+  --correct-secondary: #00b8ff;
+  --correct-gradient: linear-gradient(135deg, #00ff88 0%, #00aaff 100%);
+  --correct-glow: rgba(0, 255, 136, 0.35);
+  --correct-bg-glow: radial-gradient(circle, rgba(0,255,136,0.15) 0%, rgba(6,7,10,0) 70%);
+
+  /* Wrong (No / Fail) */
+  --wrong-primary: #ff0055;
+  --wrong-secondary: #ff7700;
+  --wrong-gradient: linear-gradient(135deg, #ff0055 0%, #ff6a00 100%);
+  --wrong-glow: rgba(255, 0, 85, 0.35);
+  --wrong-bg-glow: radial-gradient(circle, rgba(255,0,85,0.15) 0%, rgba(6,7,10,0) 70%);
+
+  /* UI Glassmorphism */
+  --glass-bg: rgba(15, 18, 30, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-glow: rgba(0, 0, 0, 0.5);
+
+  --font-family-display: 'Syne', sans-serif;
+  --font-family-body: 'Outfit', sans-serif;
+}
+
+/* 2. Reset & Base Setup */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: #030406;
+  color: var(--color-text-main);
+  font-family: var(--font-family-body);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 3. Device Framing (Mobile-Only Simulation on Desktop) */
+.device-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #030406;
+}
+
+@media (min-width: 500px) {
+  /* Desktop wrapper rendering a simulated smartphone */
+  .device-wrapper::before {
+    content: '';
+    position: absolute;
+    width: 420px;
+    height: 900px;
+    border-radius: 50px;
+    background: transparent;
+    border: 12px solid #1a1c24;
+    box-shadow: 
+      0 25px 50px -12px rgba(0, 0, 0, 0.9),
+      0 0 40px rgba(255, 255, 255, 0.03),
+      inset 0 0 18px rgba(255, 255, 255, 0.05);
+    z-index: 10;
+    pointer-events: none;
+  }
+  
+  .device-wrapper::after {
+    /* Notch */
+    content: '';
+    position: absolute;
+    top: calc(50% - 438px);
+    width: 140px;
+    height: 30px;
+    background: #1a1c24;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+    z-index: 11;
+    pointer-events: none;
+  }
+
+  .app-container {
+    width: 396px;
+    height: 876px;
+    border-radius: 38px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    position: relative;
+  }
+}
+
+/* Main Mobile Area */
+.app-container {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top, 24px) 20px env(safe-area-inset-bottom, 24px) 20px;
+}
+
+/* 4. Canvas & Atmospheric Overlays */
+.particle-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.color-wash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2;
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.color-wash-correct {
+  background: radial-gradient(circle at 30% 50%, rgba(0, 255, 136, 0.15) 0%, rgba(6,7,10,0) 80%);
+}
+
+.color-wash-wrong {
+  background: radial-gradient(circle at 70% 50%, rgba(255, 0, 85, 0.15) 0%, rgba(6,7,10,0) 80%);
+}
+
+/* Sound Toggle Button */
+.sound-toggle-btn {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 24px) + 16px);
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--color-text-main);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 99;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.sound-toggle-btn:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sound-toggle-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.sound-toggle-btn.muted .sound-icon-on {
+  display: none;
+}
+
+.sound-toggle-btn:not(.muted) .sound-icon-off {
+  display: none;
+}
+
+/* 5. Screens Layout */
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: inherit;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 3;
+}
+
+.screen.active {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+/* --- SCREEN 1: Cinematic Intro --- */
+.screen-intro {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.intro-bg-glow {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 207, 64, 0.15) 0%, rgba(6,7,10,0) 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: -1;
+  animation: slowPulse 8s infinite alternate ease-in-out;
+}
+
+.intro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: var(--accent-gold);
+  margin-bottom: 24px;
+  text-transform: uppercase;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent-gold);
+  box-shadow: 0 0 10px var(--accent-gold-glow);
+  animation: dotPulse 1.8s infinite ease-in-out;
+}
+
+.intro-title {
+  font-family: var(--font-family-display);
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title-line {
+  display: block;
+}
+
+.title-gold {
+  color: #fff;
+  text-shadow: 0 0 30px rgba(255,255,255,0.1);
+  font-size: 3.4rem;
+  letter-spacing: 0.05em;
+  font-weight: 900;
+}
+
+.title-white {
+  font-size: 1.8rem;
+  letter-spacing: 0.35em;
+  color: var(--color-text-muted);
+  text-indent: 0.35em; /* Compensate for letter spacing */
+}
+
+.intro-tagline {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  max-width: 290px;
+  margin-bottom: 40px;
+}
+
+/* Golden Pulsing Main Button */
+.btn-primary {
+  position: relative;
+  background: linear-gradient(135deg, #181922 0%, #0d0e14 100%);
+  border: 1px solid rgba(255, 207, 64, 0.4);
+  color: var(--color-text-main);
+  padding: 18px 40px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  border-radius: 12px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.btn-primary span {
+  position: relative;
+  z-index: 2;
+  text-indent: 0.25em;
+  display: inline-block;
+  color: var(--accent-gold);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 207, 64, 0.08), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+  z-index: 1;
+}
+
+.btn-primary:active {
+  transform: scale(0.96);
+  border-color: var(--accent-gold);
+}
+
+.btn-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 207, 64, 0.2) 0%, transparent 60%);
+  transform: translate(-50%, -50%) scale(0.8);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  transition: transform 0.4s ease;
+}
+
+.btn-primary:hover .btn-glow {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* --- SCREEN 2: Judge Stage --- */
+.screen-judge {
+  justify-content: space-between;
+}
+
+/* Header Styling */
+.judge-header {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 4;
+}
+
+.header-case {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.header-status {
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  color: var(--accent-gold);
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(255, 207, 64, 0.2);
+}
+
+.header-status.pulse-alpha {
+  animation: pulseAlpha 2s infinite alternate ease-in-out;
+}
+
+/* Main Arena (Paddles Container) */
+.paddles-arena {
+  flex-grow: 1;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  perspective: 1000px;
+  z-index: 4;
+  padding-bottom: 20px;
+}
+
+.paddle-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 45%;
+  height: 50vh;
+  justify-content: center;
+}
+
+/* The Paddles */
+.paddle {
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.paddle-head {
+  position: relative;
+  width: 144px;
+  height: 144px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.5),
+    inset 0 2px 2px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  transition: box-shadow 0.5s ease;
+}
+
+.paddle-inner-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.05);
+}
+
+.paddle-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  z-index: 3;
+}
+
+.paddle-content svg {
+  width: 78px;
+  height: 78px;
+  display: block;
+}
+
+.paddle-label {
+  font-family: var(--font-family-display);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+/* Correct / Pass (Green) */
+.paddle-correct .paddle-head {
+  background: var(--correct-gradient);
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.6),
+    0 0 25px var(--correct-glow);
+}
+
+.paddle-correct .icon-check {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+}
+
+/* Wrong / Fail (Red) */
+.paddle-wrong .paddle-head {
+  background: var(--wrong-gradient);
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.6),
+    0 0 25px var(--wrong-glow);
+}
+
+.paddle-wrong .icon-cross {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+}
+
+/* Handle of the Paddles */
+.paddle-handle {
+  position: relative;
+  width: 12px;
+  height: 130px;
+  background: linear-gradient(90deg, #151821 0%, #2a2e3d 50%, #0d0f15 100%);
+  border-radius: 0 0 6px 6px;
+  z-index: 1;
+  margin-top: -6px;
+  box-shadow: 
+    0 8px 16px rgba(0,0,0,0.4),
+    inset 1px 0 0 rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.handle-ring {
+  width: 130%;
+  height: 4px;
+  background: linear-gradient(90deg, #555 0%, #aaa 50%, #444 100%);
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* 6. Verdict Overlay & Cinematic Display */
+.verdict-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  pointer-events: none;
+  z-index: 5;
+  padding: 0 24px 140px 24px;
+}
+
+.verdict-glow {
+  position: absolute;
+  top: 68%;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  filter: blur(50px);
+  opacity: 0;
+  z-index: -1;
+  pointer-events: none;
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.verdict-overlay.correct-verdict .verdict-glow {
+  background: radial-gradient(circle, rgba(0, 255, 136, 0.22) 0%, transparent 70%);
+}
+
+.verdict-overlay.wrong-verdict .verdict-glow {
+  background: radial-gradient(circle, rgba(255, 0, 85, 0.22) 0%, transparent 70%);
+}
+
+.verdict-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(30px);
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+.verdict-overlay.active {
+  pointer-events: auto;
+}
+
+.verdict-overlay.active .verdict-message {
+  pointer-events: auto;
+}
+
+.verdict-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  color: var(--color-text-muted);
+  border: 1px solid var(--glass-border);
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.verdict-title {
+  font-family: var(--font-family-display);
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-indent: 0.15em;
+  margin-bottom: 14px;
+  text-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.correct-verdict .verdict-title {
+  color: var(--correct-primary);
+  text-shadow: 0 0 30px var(--correct-glow);
+}
+
+.wrong-verdict .verdict-title {
+  color: var(--wrong-primary);
+  text-shadow: 0 0 30px var(--wrong-glow);
+}
+
+.verdict-desc {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  max-width: 280px;
+  margin-bottom: 32px;
+}
+
+.btn-secondary {
+  position: relative;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-main);
+  padding: 15px 32px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  border-radius: 10px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary span {
+  position: relative;
+  z-index: 2;
+}
+
+.btn-secondary:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-glow-soft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-secondary:hover .btn-glow-soft {
+  opacity: 1;
+}
+
+/* Footer Styling */
+.judge-footer {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-bottom: 12px;
+  opacity: 0.5;
+  z-index: 4;
+}
+
+/* 7. Keyframes & Utility Animations */
+@keyframes slowPulse {
+  0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.4; }
+  100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.7; }
+}
+
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.6); opacity: 1; box-shadow: 0 0 15px var(--accent-gold); }
+}
+
+@keyframes pulseAlpha {
+  0% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* Utility visibility helper */
+.hidden {
+  display: none !important;
+}
