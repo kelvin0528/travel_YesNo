@@ -1186,7 +1186,73 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('mouseup', () => gsap.to(btn, { scale: 1.04, duration: 0.2 }));
   };
 
-  // --- SHARE JUDGING LINK ---
+  // --- SHARE MODAL HELPER ---
+  const openShareModal = async () => {
+    const base64Data = localStorage.getItem('food_photo');
+    if (!base64Data) return;
+
+    playSound('swipe');
+    triggerHaptic(40);
+
+    // Open modal immediately with loading state
+    if (btnModalCopyText) {
+      btnModalCopyText.innerText = "UPLOADING...";
+    }
+    if (shareModal) {
+      shareModal.classList.add('active');
+    }
+
+    // Clear previous QR
+    if (qrCanvas) {
+      const ctx = qrCanvas.getContext('2d');
+      ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+    }
+
+    let shareUrl;
+
+    try {
+      // Upload photo to serverless API and get short ID
+      const response = await fetch('/api/photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photo: base64Data })
+      });
+
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+      const data = await response.json();
+      shareUrl = window.location.origin + window.location.pathname + '#id=' + data.id;
+    } catch (err) {
+      console.warn('API upload failed, falling back to base64 URL:', err);
+      // Fallback: use old base64 URL (won't work in QR but Copy Link still works)
+      shareUrl = window.location.origin + window.location.pathname + '#photo=' + encodeURIComponent(base64Data);
+    }
+
+    currentShareUrl = shareUrl;
+
+    // Generate QR Code from the (now short) URL
+    if (window.QRious && qrCanvas) {
+      try {
+        new QRious({
+          element: qrCanvas,
+          value: shareUrl,
+          size: 250,
+          background: '#ffffff',
+          foreground: '#0a0a0c',
+          level: 'M'
+        });
+      } catch (qrErr) {
+        console.error("QR Code generation error:", qrErr);
+      }
+    }
+
+    // Reset button text
+    if (btnModalCopyText) {
+      btnModalCopyText.innerText = "COPY LINK";
+    }
+  };
+
+  // --- SHARE JUDGING LINK (Upload Screen) ---
   if (btnShareLink) {
     setupResetBtnHovers(btnShareLink, false);
     setupResetBtnHovers(btnProceed, true);
@@ -1194,38 +1260,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setupResetBtnHovers(btnModalCopy, true);
     }
 
-    btnShareLink.addEventListener('click', () => {
-      const base64Data = localStorage.getItem('food_photo');
-      if (base64Data) {
-        playSound('swipe');
-        triggerHaptic(40);
-
-        // Build client-side fragment URL
-        const shareUrl = window.location.origin + window.location.pathname + '#photo=' + encodeURIComponent(base64Data);
-        currentShareUrl = shareUrl;
-
-        // Generate QR Code dynamically
-        if (window.QRious && qrCanvas) {
-          try {
-            new QRious({
-              element: qrCanvas,
-              value: shareUrl,
-              size: 250,
-              background: '#ffffff',
-              foreground: '#0a0a0c',
-              level: 'M'
-            });
-          } catch (qrErr) {
-            console.error("QR Code generation error:", qrErr);
-          }
-        }
-
-        // Open Modal
-        if (shareModal) {
-          shareModal.classList.add('active');
-        }
-      }
-    });
+    btnShareLink.addEventListener('click', openShareModal);
   }
 
   // --- MODAL ACTION BINDINGS ---
@@ -1392,83 +1427,86 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- SHARE LINK FROM JUDGING STAGE HUD ---
   if (btnShareJudge) {
     setupResetBtnHovers(btnShareJudge, false);
-
-    btnShareJudge.addEventListener('click', () => {
-      const base64Data = localStorage.getItem('food_photo');
-      if (base64Data) {
-        playSound('swipe');
-        triggerHaptic(40);
-
-        // Build client-side fragment URL
-        const shareUrl = window.location.origin + window.location.pathname + '#photo=' + encodeURIComponent(base64Data);
-        currentShareUrl = shareUrl;
-
-        // Generate QR Code dynamically
-        if (window.QRious && qrCanvas) {
-          try {
-            new QRious({
-              element: qrCanvas,
-              value: shareUrl,
-              size: 250,
-              background: '#ffffff',
-              foreground: '#0a0a0c',
-              level: 'M'
-            });
-          } catch (qrErr) {
-            console.error("QR Code generation error:", qrErr);
-          }
-        }
-
-        // Open Modal
-        if (shareModal) {
-          shareModal.classList.add('active');
-        }
-      }
-    });
+    btnShareJudge.addEventListener('click', openShareModal);
   }
 
   // --- CHECK SHARED LINK ON INITIAL LOAD ---
-  const checkSharedPhoto = () => {
+  // Helper to display shared photo in judge stage
+  const displaySharedPhoto = (photoData) => {
+    screenIntro.classList.remove('active');
+    screenJudge.classList.add('active');
+    
+    if (paddlesArena) {
+      paddlesArena.classList.add('has-photo');
+    }
+    if (judgePhotoWrapper) {
+      judgePhotoWrapper.classList.remove('hidden');
+    }
+    if (btnClearPhoto) {
+      btnClearPhoto.classList.remove('hidden');
+    }
+    if (btnShareJudge) {
+      btnShareJudge.classList.remove('hidden');
+    }
+    judgePhoto.src = photoData;
+    
+    setTimeout(() => {
+      playStageEntry();
+    }, 150);
+  };
+
+  const checkSharedPhoto = async () => {
     const hash = window.location.hash;
+
+    // New format: #id=abc123 (short URL from Vercel KV)
+    if (hash.startsWith('#id=')) {
+      try {
+        const photoId = hash.substring('#id='.length);
+        
+        // Clean URL immediately
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+
+        // Fetch photo from API
+        const response = await fetch(`/api/photo?id=${encodeURIComponent(photoId)}`);
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+        const data = await response.json();
+        if (data.photo) {
+          localStorage.setItem('food_photo', data.photo);
+          displaySharedPhoto(data.photo);
+          return true;
+        }
+      } catch (err) {
+        console.error("Error loading shared photo from API:", err);
+      }
+    }
+
+    // Legacy format: #photo=base64data (backward compatibility)
     if (hash.startsWith('#photo=')) {
       try {
         const photoParam = decodeURIComponent(hash.substring('#photo='.length));
         localStorage.setItem('food_photo', photoParam);
         
-        // Remove base64 data from URL to clean it up
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
         
-        // Transition straight to Stage Screen
-        screenIntro.classList.remove('active');
-        screenJudge.classList.add('active');
-        
-        if (paddlesArena) {
-          paddlesArena.classList.add('has-photo');
-        }
-        if (judgePhotoWrapper) {
-          judgePhotoWrapper.classList.remove('hidden');
-        }
-        if (btnClearPhoto) {
-          btnClearPhoto.classList.remove('hidden');
-        }
-        judgePhoto.src = photoParam;
-        
-        setTimeout(() => {
-          playStageEntry();
-        }, 150);
+        displaySharedPhoto(photoParam);
         return true;
       } catch (err) {
         console.error("Error reading shared photo parameter:", err);
       }
     }
+
     return false;
   };
 
-  const isShared = checkSharedPhoto();
-  if (!isShared) {
-    playIntroEntry();
-  } else {
-    gsap.set(screenIntro, { opacity: 0 });
-  }
+  // Run the async check
+  checkSharedPhoto().then((isShared) => {
+    if (!isShared) {
+      playIntroEntry();
+    } else {
+      gsap.set(screenIntro, { opacity: 0 });
+    }
+  });
 });
