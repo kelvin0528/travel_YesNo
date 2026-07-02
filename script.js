@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- SELECTORS ---
   const screenIntro = document.getElementById('screen-intro');
+  const screenUpload = document.getElementById('screen-upload');
   const screenJudge = document.getElementById('screen-judge');
   const btnStart = document.getElementById('btn-start');
   const btnReset = document.getElementById('btn-reset');
@@ -33,7 +34,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const verdictOverlay = document.getElementById('verdict-overlay');
   const verdictTitle = document.getElementById('v-title');
   const verdictDesc = document.getElementById('v-desc');
-  const verdictBadge = document.getElementById('v-badge');
+
+  // Photo Upload and Display selectors
+  const photoInput = document.getElementById('photo-input');
+  const uploadCard = document.getElementById('upload-card');
+  const uploadPlaceholder = document.getElementById('upload-placeholder');
+  const previewContainer = document.getElementById('preview-container');
+  const uploadPreviewImg = document.getElementById('upload-preview-img');
+  const uploadActions = document.getElementById('upload-actions');
+  const btnShareLink = document.getElementById('btn-share-link');
+  const btnShareText = document.getElementById('btn-share-text');
+  const btnProceed = document.getElementById('btn-proceed');
+  const judgePhoto = document.getElementById('judge-photo');
+  const judgePhotoWrapper = document.getElementById('judge-photo-wrapper');
+  const btnGotoUpload = document.getElementById('btn-goto-upload');
+  const hudButtonsContainer = document.getElementById('hud-buttons-container');
 
   // --- AUDIO SYNTH ENGINE (Web Audio API) ---
   const initAudio = () => {
@@ -153,6 +168,20 @@ document.addEventListener('DOMContentLoaded', () => {
         osc.stop(now + 0.3);
         break;
       }
+      case 'hover': {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(1000, now + 0.05);
+        gain.gain.setValueAtTime(0.02, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+        break;
+      }
     }
   };
 
@@ -204,66 +233,149 @@ document.addEventListener('DOMContentLoaded', () => {
         this.vy = -0.2 - Math.random() * 0.5;
         this.size = 1 + Math.random() * 2;
         this.color = `rgba(255, 255, 255, ${0.15 + Math.random() * 0.25})`;
-      } else if (type === 'correct') {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 2 + Math.random() * 8;
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed - 2; // slightly upward bias
-        this.size = 3 + Math.random() * 4;
-        // Cyan-emerald spectrum
-        const hue = 130 + Math.random() * 40;
-        this.color = `hsla(${hue}, 100%, 65%, `;
-      } else if (type === 'wrong') {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 3 + Math.random() * 10;
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
-        this.size = 2 + Math.random() * 5;
-        // Orange-crimson spectrum
-        const hue = Math.random() > 0.5 ? 345 : 15;
-        this.color = `hsla(${hue}, 100%, 55%, `;
+      } else if (type === 'correct_rain' || type === 'correct') {
+        this.isEmoji = type === 'correct_rain' || Math.random() > 0.15;
+        if (this.isEmoji) {
+          const emojis = ['😋', '😍', '👍', '🎉', '🌟', '❤️', '👏', '🥳', '🙌', '✨', '👌', '👑', '🌈', '🍕', '🍔', '🍦', '🍩', '🍰', '🧁', '🥞', '🍒', '🍓'];
+          this.text = emojis[Math.floor(Math.random() * emojis.length)];
+          this.fontSize = type === 'correct_rain' ? 16 + Math.random() * 22 : 18 + Math.random() * 24;
+          this.rotation = Math.random() * Math.PI * 2;
+          this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+          
+          if (type === 'correct_rain') {
+            // Falling down
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = 2 + Math.random() * 4;
+            this.decay = 0; // retain full opacity
+          } else {
+            // Burst upward
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.6;
+            const speed = 4 + Math.random() * 8;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed;
+            this.decay = 0; // retain full opacity
+          }
+        } else {
+          // Circular sparkles fallback
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2 + Math.random() * 8;
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed - 2;
+          this.size = 3 + Math.random() * 4;
+          // Cyan-emerald spectrum
+          const hue = 130 + Math.random() * 40;
+          this.color = `hsla(${hue}, 100%, 65%, `;
+        }
+      } else if (type === 'wrong_rain' || type === 'wrong') {
+        this.isEmoji = type === 'wrong_rain' || Math.random() > 0.15;
+        if (this.isEmoji) {
+          const emojis = ['🤢', '🤮', '👎', '😡', '🤬', '💩', '💀', '👿', '🙅', '💔', '😭', '💥', '⚠️', '❌', '🚫', '🥀', '🥱', '🗑️', '🤧'];
+          this.text = emojis[Math.floor(Math.random() * emojis.length)];
+          this.fontSize = type === 'wrong_rain' ? 16 + Math.random() * 22 : 18 + Math.random() * 24;
+          this.rotation = Math.random() * Math.PI * 2;
+          this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+
+          if (type === 'wrong_rain') {
+            // Falling down
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = 2.5 + Math.random() * 4.5;
+            this.decay = 0; // retain full opacity
+          } else {
+            // Burst outward
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 3 + Math.random() * 8;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed - 1;
+            this.decay = 0; // retain full opacity
+          }
+        } else {
+          // Sharp sparkles fallback
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 3 + Math.random() * 10;
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed;
+          this.size = 2 + Math.random() * 5;
+          // Orange-crimson spectrum
+          const hue = Math.random() > 0.5 ? 345 : 15;
+          this.color = `hsla(${hue}, 100%, 55%, `;
+        }
       }
     }
 
     update() {
-      this.x += this.vx;
-      this.y += this.vy;
-
-      if (this.type === 'dust') {
-        // Wrap edge boundaries for dust
-        if (this.y < 0) this.y = h;
-        if (this.x < 0) this.x = w;
-        if (this.x > w) this.x = 0;
+      if (this.isEmoji) {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.rotation += this.rotationSpeed;
+        this.vx *= 0.96;
+        this.vy *= 0.96;
+        
+        if (this.type.endsWith('_rain')) {
+          this.vy += 0.06; // continuous downward gravitational acceleration for rain
+          // Clear when falling past screen bottom
+          if (this.y > h + 40 || this.x < -40 || this.x > w + 40) {
+            this.alpha = 0;
+          }
+        } else {
+          this.vy -= 0.08; // gentle upwards lift acceleration for burst
+          // Clear when floating past screen top
+          if (this.y < -40 || this.x < -40 || this.x > w + 40) {
+            this.alpha = 0;
+          }
+        }
       } else {
-        // Speed dampening for explosions
-        this.vx *= 0.95;
-        this.vy *= 0.95;
-        this.alpha -= this.decay;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.type === 'dust') {
+          // Wrap edge boundaries for dust
+          if (this.y < 0) this.y = h;
+          if (this.x < 0) this.x = w;
+          if (this.x > w) this.x = 0;
+        } else {
+          // Speed dampening for explosions
+          this.vx *= 0.95;
+          this.vy *= 0.95;
+          this.alpha -= this.decay;
+        }
       }
     }
 
     draw() {
-      ctx.beginPath();
-      if (this.type === 'dust') {
-        ctx.fillStyle = this.color;
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (this.type === 'correct') {
-        // Glowing circular sparks
-        const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
-        grad.addColorStop(0, this.color + '1)');
-        grad.addColorStop(1, this.color + '0)');
-        ctx.fillStyle = grad;
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (this.type === 'wrong') {
-        // Rectangular/sharp sparks with directional trails
-        ctx.strokeStyle = this.color + this.alpha + ')';
-        ctx.lineWidth = this.size / 2;
-        ctx.lineCap = 'round';
-        ctx.moveTo(this.x, this.y);
-        ctx.lineTo(this.x - this.vx * 1.5, this.y - this.vy * 1.5);
-        ctx.stroke();
+      if (this.isEmoji) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.globalAlpha = 1.0; // Force 100% full opacity
+        ctx.fillStyle = '#ffffff'; // Reset fillStyle to prevent particle gradient bleed
+        ctx.font = `${this.fontSize}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.text, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        if (this.type === 'dust') {
+          ctx.fillStyle = this.color;
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (this.type === 'correct') {
+          // Glowing circular sparkles
+          const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+          grad.addColorStop(0, this.color + '1)');
+          grad.addColorStop(1, this.color + '0)');
+          ctx.fillStyle = grad;
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (this.type === 'wrong') {
+          // Rectangular/sharp sparks with directional trails
+          ctx.strokeStyle = this.color + this.alpha + ')';
+          ctx.lineWidth = this.size / 2;
+          ctx.lineCap = 'round';
+          ctx.moveTo(this.x, this.y);
+          ctx.lineTo(this.x - this.vx * 1.5, this.y - this.vy * 1.5);
+          ctx.stroke();
+        }
       }
     }
   }
@@ -275,7 +387,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Explosion triggers
   const spawnExplosion = (x, y, type) => {
-    const count = type === 'correct' ? 80 : 100;
+    // Reduced count from 80-100 to 18-22 to optimize canvas text rendering speed
+    const count = type === 'correct' ? 18 : 22;
     for (let i = 0; i < count; i++) {
       particles.push(new Particle(x, y, type));
     }
@@ -288,6 +401,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Spawn subtle dust continuously
     if (particles.filter(p => p.type === 'dust').length < 40) {
       particles.push(new Particle(Math.random() * w, h, 'dust'));
+    }
+
+    // Continuous emoji rain during active verdict (capped to prevent performance lag)
+    if (currentVerdict) {
+      const activeEmojis = particles.filter(p => p.isEmoji).length;
+      if (activeEmojis < 20 && Math.random() < 0.12) {
+        particles.push(new Particle(Math.random() * w, -30, currentVerdict + '_rain'));
+      }
     }
 
     particles = particles.filter(p => p.alpha > 0);
@@ -380,13 +501,76 @@ document.addEventListener('DOMContentLoaded', () => {
     wrapper.addEventListener('touchend', handleLeave);
   };
 
+  // --- GAMING BUTTON GSAP INTERACTION ---
+  if (btnStart) {
+    const tlHover = gsap.timeline({ paused: true });
+    
+    tlHover.to(btnStart, {
+      scale: 1.05,
+      backgroundColor: "rgba(25, 21, 14, 0.8)",
+      borderColor: "rgba(255, 207, 64, 0.75)",
+      boxShadow: "0 15px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 207, 64, 0.25)",
+      duration: 0.35,
+      ease: "power2.out"
+    });
+    
+    tlHover.to(btnStart.querySelector('.btn-bracket.tl'), { top: -6, left: -6, width: 12, height: 12, opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tlHover.to(btnStart.querySelector('.btn-bracket.tr'), { top: -6, right: -6, width: 12, height: 12, opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tlHover.to(btnStart.querySelector('.btn-bracket.bl'), { bottom: -6, left: -6, width: 12, height: 12, opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tlHover.to(btnStart.querySelector('.btn-bracket.br'), { bottom: -6, right: -6, width: 12, height: 12, opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    
+    tlHover.to(btnStart.querySelector('.btn-text'), {
+      color: "#ffffff",
+      textShadow: "0 0 15px rgba(255, 255, 255, 0.6)",
+      letterSpacing: "0.26em",
+      duration: 0.35,
+      ease: "power2.out"
+    }, 0);
+    
+    tlHover.to(btnStart.querySelector('.btn-subtext'), {
+      opacity: 0.95,
+      color: "var(--accent-gold)",
+      duration: 0.35,
+      ease: "power2.out"
+    }, 0);
+    
+    tlHover.to(btnStart.querySelector('.btn-glow'), {
+      scale: 1.25,
+      opacity: 0.8,
+      duration: 0.35,
+      ease: "power2.out"
+    }, 0);
+
+    btnStart.addEventListener('mouseenter', () => {
+      tlHover.play();
+      playSound('hover');
+      
+      // Sheen flash animation on hover
+      gsap.fromTo(btnStart.querySelector('.btn-sheen'),
+        { left: '-100%' },
+        { left: '100%', duration: 0.75, ease: "power2.inOut" }
+      );
+    });
+    
+    btnStart.addEventListener('mouseleave', () => {
+      tlHover.reverse();
+    });
+    
+    btnStart.addEventListener('mousedown', () => {
+      gsap.to(btnStart, { scale: 0.96, duration: 0.1 });
+    });
+    
+    btnStart.addEventListener('mouseup', () => {
+      gsap.to(btnStart, { scale: 1.05, duration: 0.2, ease: "power2.out" });
+    });
+  }
+
   setup3DTilt(wrapCorrect, paddleCorrect);
   setup3DTilt(wrapWrong, paddleWrong);
 
-
   // --- SCREEN TRANSITIONS ---
 
-  // Intro -> Stage
+  // Intro -> Stage directly (checking local storage for persistent photo state)
   btnStart.addEventListener('click', () => {
     playSound('swipe');
     triggerHaptic(40);
@@ -398,7 +582,26 @@ document.addEventListener('DOMContentLoaded', () => {
       onComplete: () => {
         screenIntro.classList.remove('active');
         screenJudge.classList.add('active');
-        // Trigger arena entries
+
+        // Check if there is an existing/persistent photo in localStorage
+        const storedPhoto = localStorage.getItem('food_photo');
+        if (storedPhoto) {
+          if (paddlesArena) {
+            paddlesArena.classList.add('has-photo');
+          }
+          if (judgePhotoWrapper) {
+            judgePhotoWrapper.classList.remove('hidden');
+          }
+          judgePhoto.src = storedPhoto;
+        } else {
+          if (paddlesArena) {
+            paddlesArena.classList.remove('has-photo');
+          }
+          if (judgePhotoWrapper) {
+            judgePhotoWrapper.classList.add('hidden');
+          }
+        }
+
         playStageEntry();
       }
     });
@@ -415,9 +618,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }, "-=0.2");
   });
 
+  // Upload Screen Entry Animation
+  const playUploadEntry = () => {
+    gsap.set(screenUpload, { opacity: 1 });
+
+    // Reset upload card components to clean, default state
+    if (photoInput) {
+      photoInput.value = '';
+    }
+    if (uploadPreviewImg) {
+      uploadPreviewImg.src = '';
+    }
+    if (previewContainer) {
+      previewContainer.classList.add('hidden');
+    }
+    if (uploadPlaceholder) {
+      uploadPlaceholder.classList.remove('hidden');
+    }
+    if (uploadCard) {
+      uploadCard.classList.remove('has-preview');
+    }
+    if (uploadActions) {
+      uploadActions.classList.add('hidden');
+    }
+
+    gsap.fromTo(screenUpload.querySelector('.upload-content'),
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.8, ease: "power4.out" }
+    );
+  };
+
   // Stage Entry Animation
   const playStageEntry = () => {
     gsap.set(screenJudge, { opacity: 1 });
+    if (paddlesArena) {
+      gsap.set(paddlesArena, { opacity: 1, y: 0 });
+    }
+    if (hudButtonsContainer) {
+      gsap.set(hudButtonsContainer, { opacity: 1, y: 0 });
+    }
 
     // Animate Header
     gsap.fromTo('.judge-header',
@@ -429,6 +668,12 @@ document.addEventListener('DOMContentLoaded', () => {
     gsap.fromTo(instructionsText,
       { y: 20, opacity: 0 },
       { y: 0, opacity: 0.5, duration: 0.8, ease: "power4.out", delay: 0.2 }
+    );
+
+    // Animate Polaroid Photo Card
+    gsap.fromTo(judgePhotoWrapper,
+      { scale: 0.2, rotate: 45, opacity: 0, y: -100 },
+      { scale: 1, rotate: -3, opacity: 1, y: 0, duration: 1.1, ease: "back.out(1.3)", delay: 0.1 }
     );
 
     // Animate Paddles (springy popup from the bottom)
@@ -462,12 +707,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (verdict === 'correct') {
       verdictTitle.innerText = "DELICIOUS";
       verdictDesc.innerText = "This dish is certified delicious. The Food Judge has spoken.";
-      verdictBadge.innerText = "VERDICT: PASS";
       verdictOverlay.className = "verdict-overlay correct-verdict";
     } else {
       verdictTitle.innerText = "TERRIBLE";
-      verdictDesc.innerText = "Absolute culinary failure. Cast out of the kitchen immediately.";
-      verdictBadge.innerText = "VERDICT: FAIL";
+      verdictDesc.innerText = "Not quite to the judge's taste. Let's try again!";
       verdictOverlay.className = "verdict-overlay wrong-verdict";
     }
 
@@ -506,9 +749,23 @@ document.addEventListener('DOMContentLoaded', () => {
       ease: "power3.in"
     });
 
+    selectTl.to(judgePhotoWrapper, {
+      opacity: 0,
+      scale: 0.5,
+      y: 50,
+      duration: 0.5,
+      ease: "power3.in"
+    }, 0);
+
     selectTl.to(instructionsText, {
       opacity: 0,
       y: 20,
+      duration: 0.4
+    }, 0);
+
+    selectTl.to(hudButtonsContainer, {
+      opacity: 0,
+      y: 15,
       duration: 0.4
     }, 0);
 
@@ -517,8 +774,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const arenaRect = paddlesArena.getBoundingClientRect();
     const wrapRect = activeWrap.getBoundingClientRect();
     const offsetX = (arenaRect.left + arenaRect.width / 2) - (wrapRect.left + wrapRect.width / 2);
-    // Raise paddle up to upper half to clear the bottom text message
-    const offsetY = -90;
+    // Calculate vertical offset dynamically to center of the arena (slightly shifted up to clear bottom message)
+    const offsetY = (arenaRect.top + arenaRect.height / 2) - (wrapRect.top + wrapRect.height / 2) - 50;
 
     // Dynamic cinematic motion
     if (verdict === 'correct') {
@@ -605,10 +862,85 @@ document.addEventListener('DOMContentLoaded', () => {
   paddleWrong.addEventListener('click', () => castVerdict('wrong'));
 
 
+  // --- GAMING RESET BUTTON GSAP INTERACTION ---
+  if (btnReset) {
+    const tlResetHover = gsap.timeline({ paused: true });
+    
+    tlResetHover.to(btnReset, {
+      scale: 1.05,
+      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      borderColor: "rgba(255, 255, 255, 0.4)",
+      boxShadow: "0 15px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 255, 255, 0.1)",
+      duration: 0.35,
+      ease: "power2.out"
+    });
+    
+    tlResetHover.to(btnReset.querySelector('.btn-bracket.tl'), { top: -6, left: -6, width: 12, height: 12, opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tlResetHover.to(btnReset.querySelector('.btn-bracket.tr'), { top: -6, right: -6, width: 12, height: 12, opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tlResetHover.to(btnReset.querySelector('.btn-bracket.bl'), { bottom: -6, left: -6, width: 12, height: 12, opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    tlResetHover.to(btnReset.querySelector('.btn-bracket.br'), { bottom: -6, right: -6, width: 12, height: 12, opacity: 1, duration: 0.35, ease: "power2.out" }, 0);
+    
+    tlResetHover.to(btnReset.querySelector('.btn-text'), {
+      textShadow: "0 0 15px rgba(255, 255, 255, 0.6)",
+      letterSpacing: "0.26em",
+      duration: 0.35,
+      ease: "power2.out"
+    }, 0);
+    
+    tlResetHover.to(btnReset.querySelector('.btn-subtext'), {
+      opacity: 0.95,
+      color: "#ffffff",
+      duration: 0.35,
+      ease: "power2.out"
+    }, 0);
+    
+    tlResetHover.to(btnReset.querySelector('.btn-glow-soft'), {
+      scale: 1.25,
+      opacity: 0.8,
+      duration: 0.35,
+      ease: "power2.out"
+    }, 0);
+
+    btnReset.addEventListener('mouseenter', () => {
+      tlResetHover.play();
+      playSound('hover');
+      
+      // Sheen flash animation on hover
+      gsap.fromTo(btnReset.querySelector('.btn-sheen'),
+        { left: '-100%' },
+        { left: '100%', duration: 0.75, ease: "power2.inOut" }
+      );
+    });
+    
+    btnReset.addEventListener('mouseleave', () => {
+      tlResetHover.reverse();
+    });
+    
+    btnReset.addEventListener('mousedown', () => {
+      gsap.to(btnReset, { scale: 0.96, duration: 0.1 });
+    });
+    
+    btnReset.addEventListener('mouseup', () => {
+      gsap.to(btnReset, { scale: 1.05, duration: 0.2, ease: "power2.out" });
+    });
+  }
+
+
   // --- RESET ACTION (JUDGE AGAIN) ---
 
   btnReset.addEventListener('click', () => {
     if (isTransitioning || !currentVerdict) return;
+
+    // Clear stored photo and revert paddles back to classic centered layout
+    localStorage.removeItem('food_photo');
+    if (paddlesArena) {
+      paddlesArena.classList.remove('has-photo');
+    }
+
+    // Instantly halt rain particles by clearing currentVerdict and filtering particles list
+    const tempVerdict = currentVerdict;
+    currentVerdict = null;
+    particles = particles.filter(p => p.type === 'dust');
 
     isTransitioning = true;
     playSound('reset');
@@ -616,11 +948,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resetTl = gsap.timeline({
       onComplete: () => {
-        currentVerdict = null;
         isTransitioning = false;
         statusText.innerText = "AWAITING VERDICT...";
         statusText.classList.add('pulse-alpha');
         verdictOverlay.classList.remove('active');
+
+        // Hide photo wrapper permanently
+        if (judgePhotoWrapper) {
+          judgePhotoWrapper.classList.add('hidden');
+        }
 
         // Restart float loops
         startIdleFloating();
@@ -648,9 +984,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 0);
 
     // 2. Return selected paddle to its origin
-    const activeWrap = currentVerdict === 'correct' ? wrapCorrect : wrapWrong;
-    const activePaddle = currentVerdict === 'correct' ? paddleCorrect : paddleWrong;
-    const inactiveWrap = currentVerdict === 'correct' ? wrapWrong : wrapCorrect;
+    const activeWrap = tempVerdict === 'correct' ? wrapCorrect : wrapWrong;
+    const activePaddle = tempVerdict === 'correct' ? paddleCorrect : paddleWrong;
+    const inactiveWrap = tempVerdict === 'correct' ? wrapWrong : wrapCorrect;
 
     // Reset paddle transformations
     resetTl.to(activeWrap, {
@@ -671,10 +1007,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Slide back in the inactive paddle
     resetTl.fromTo(inactiveWrap,
-      { opacity: 0, scale: 0.4, y: 300, rotate: currentVerdict === 'correct' ? -45 : 45 },
+      { opacity: 0, scale: 0.4, y: 300, rotate: tempVerdict === 'correct' ? -45 : 45 },
       { opacity: 1, scale: 1, y: 0, rotate: 0, duration: 0.8, ease: "back.out(1)" },
       0.3
     );
+
+
 
     // Restore instructions footer
     resetTl.to(instructionsText, {
@@ -682,5 +1020,290 @@ document.addEventListener('DOMContentLoaded', () => {
       y: 0,
       duration: 0.5
     }, 0.4);
+
+    resetTl.fromTo(hudButtonsContainer,
+      { opacity: 0, y: 15 },
+      { opacity: 1, y: 0, duration: 0.5 },
+      0.4
+    );
   });
+
+  // --- INTRO ENTRY ANIMATION ---
+  const playIntroEntry = () => {
+    const tl = gsap.timeline();
+    
+    // Set initial states
+    gsap.set('.intro-badge', { y: 20, opacity: 0 });
+    gsap.set('.title-gold', { y: 30, opacity: 0 });
+    gsap.set('.title-white', { y: 30, opacity: 0 });
+    gsap.set('.intro-divider', { scaleX: 0, opacity: 0 });
+    gsap.set('.intro-tagline', { y: 20, opacity: 0 });
+    gsap.set('.btn-primary', { y: 30, opacity: 0 });
+    
+    tl.to('.intro-badge', { y: 0, opacity: 1, duration: 0.8, ease: "power4.out" })
+      .to('.title-gold', { y: 0, opacity: 1, duration: 1, ease: "power4.out" }, "-=0.6")
+      .to('.title-white', { y: 0, opacity: 1, duration: 1, ease: "power4.out" }, "-=0.8")
+      .to('.intro-divider', { scaleX: 1, opacity: 0.6, duration: 0.8, ease: "power2.out" }, "-=0.6")
+      .to('.intro-tagline', { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, "-=0.5")
+      .to('.btn-primary', { y: 0, opacity: 1, duration: 0.8, ease: "back.out(1.5)" }, "-=0.5");
+  };
+
+  // --- IMAGE COMPRESSION UTILITY ---
+  const compressImage = (file, callback) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Resize to max 350px width/height while maintaining aspect ratio
+        const maxDim = 350;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Compress as JPEG with 0.6 quality for ultra-compact URL lengths
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+        callback(compressedBase64);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // --- PHOTO UPLOAD LOGIC ---
+  if (uploadCard && photoInput) {
+    uploadCard.addEventListener('click', () => {
+      playSound('click');
+      photoInput.click();
+    });
+
+    photoInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        playSound('swipe');
+        
+        compressImage(file, (base64Data) => {
+          try {
+            localStorage.setItem('food_photo', base64Data);
+            
+            // Display preview in upload card
+            if (uploadCard) {
+              uploadCard.classList.add('has-preview');
+            }
+            uploadPreviewImg.src = base64Data;
+            uploadPlaceholder.classList.add('hidden');
+            previewContainer.classList.remove('hidden');
+            
+            // Transition in action buttons using GSAP
+            uploadActions.classList.remove('hidden');
+            gsap.fromTo(uploadActions,
+              { opacity: 0, y: 15 },
+              { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }
+            );
+          } catch (err) {
+            console.error("Storage error:", err);
+          }
+        });
+      }
+    });
+  }
+
+  // --- SLEEK BUTTON HOVER GENERATOR ---
+  const setupResetBtnHovers = (btn, isPrimary) => {
+    if (!btn) return;
+    const tl = gsap.timeline({ paused: true });
+    tl.to(btn, {
+      scale: 1.04,
+      backgroundColor: isPrimary ? "rgba(25, 21, 14, 0.8)" : "rgba(255, 255, 255, 0.08)",
+      borderColor: isPrimary ? "rgba(255, 207, 64, 0.75)" : "rgba(255, 255, 255, 0.4)",
+      boxShadow: isPrimary 
+        ? "0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 207, 64, 0.2)"
+        : "0 10px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 255, 255, 0.08)",
+      duration: 0.3,
+      ease: "power2.out"
+    });
+    tl.to(btn.querySelector('.btn-bracket.tl'), { top: -5, left: -5, width: 10, height: 10, opacity: 1, duration: 0.3 }, 0);
+    tl.to(btn.querySelector('.btn-bracket.tr'), { top: -5, right: -5, width: 10, height: 10, opacity: 1, duration: 0.3 }, 0);
+    tl.to(btn.querySelector('.btn-bracket.bl'), { bottom: -5, left: -5, width: 10, height: 10, opacity: 1, duration: 0.3 }, 0);
+    tl.to(btn.querySelector('.btn-bracket.br'), { bottom: -5, right: -5, width: 10, height: 10, opacity: 1, duration: 0.3 }, 0);
+
+    btn.addEventListener('mouseenter', () => {
+      tl.play();
+      playSound('hover');
+      const sheenEl = btn.querySelector('.btn-sheen');
+      if (sheenEl) {
+        gsap.fromTo(sheenEl,
+          { left: '-100%' },
+          { left: '100%', duration: 0.7, ease: "power2.inOut" }
+        );
+      }
+    });
+    btn.addEventListener('mouseleave', () => tl.reverse());
+    btn.addEventListener('mousedown', () => gsap.to(btn, { scale: 0.96, duration: 0.1 }));
+    btn.addEventListener('mouseup', () => gsap.to(btn, { scale: 1.04, duration: 0.2 }));
+  };
+
+  // --- SHARE JUDGING LINK ---
+  if (btnShareLink) {
+    setupResetBtnHovers(btnShareLink, false);
+    setupResetBtnHovers(btnProceed, true);
+
+    btnShareLink.addEventListener('click', () => {
+      const base64Data = localStorage.getItem('food_photo');
+      if (base64Data) {
+        // Use a hash parameter (#photo=) so the data is client-side only and never sent to the server (prevents HTTP 431)
+        const shareUrl = window.location.origin + window.location.pathname + '#photo=' + encodeURIComponent(base64Data);
+        
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          playSound('correct');
+          triggerHaptic([50, 50]);
+          
+          // Visual feedback on button
+          btnShareText.innerText = "COPIED!";
+          setTimeout(() => {
+            btnShareText.innerText = "SHARE LINK";
+          }, 2000);
+        }).catch((err) => {
+          console.error("Failed to copy URL:", err);
+          alert("Could not copy link automatically. Please copy the page URL.");
+        });
+      }
+    });
+  }
+
+  // --- PROCEED TO JUDGING ---
+  if (btnProceed) {
+    btnProceed.addEventListener('click', () => {
+      playSound('swipe');
+      triggerHaptic(40);
+      
+      const uploadTl = gsap.timeline({
+        onComplete: () => {
+          screenUpload.classList.remove('active');
+          screenJudge.classList.add('active');
+          
+          // Load photo from localStorage
+          const storedPhoto = localStorage.getItem('food_photo');
+          if (storedPhoto) {
+            if (paddlesArena) {
+              paddlesArena.classList.add('has-photo');
+            }
+            if (judgePhotoWrapper) {
+              judgePhotoWrapper.classList.remove('hidden');
+            }
+            judgePhoto.src = storedPhoto;
+          } else {
+            if (paddlesArena) {
+              paddlesArena.classList.remove('has-photo');
+            }
+            if (judgePhotoWrapper) {
+              judgePhotoWrapper.classList.add('hidden');
+            }
+          }
+          
+          playStageEntry();
+        }
+      });
+      
+      uploadTl.to(screenUpload.querySelector('.upload-content'), {
+        y: -30,
+        opacity: 0,
+        duration: 0.5,
+        ease: "power3.in"
+      });
+      uploadTl.to(screenUpload, {
+        opacity: 0,
+        duration: 0.4
+      }, "-=0.2");
+    });
+  }
+
+  // --- GO TO UPLOAD SCREEN FROM JUDGING HUD ---
+  if (btnGotoUpload) {
+    setupResetBtnHovers(btnGotoUpload, false);
+
+    btnGotoUpload.addEventListener('click', () => {
+      playSound('swipe');
+      triggerHaptic(40);
+      stopIdleFloating();
+
+      const judgeToUploadTl = gsap.timeline({
+        onComplete: () => {
+          screenJudge.classList.remove('active');
+          screenUpload.classList.add('active');
+          playUploadEntry();
+        }
+      });
+
+      judgeToUploadTl.to(screenJudge.querySelector('.paddles-arena'), {
+        y: 40,
+        opacity: 0,
+        duration: 0.5,
+        ease: "power3.in"
+      });
+      judgeToUploadTl.to(screenJudge, {
+        opacity: 0,
+        duration: 0.4
+      }, "-=0.2");
+    });
+  }
+
+  // --- CHECK SHARED LINK ON INITIAL LOAD ---
+  const checkSharedPhoto = () => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#photo=')) {
+      try {
+        const photoParam = decodeURIComponent(hash.substring('#photo='.length));
+        localStorage.setItem('food_photo', photoParam);
+        
+        // Remove base64 data from URL to clean it up
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        
+        // Transition straight to Stage Screen
+        screenIntro.classList.remove('active');
+        screenJudge.classList.add('active');
+        
+        if (paddlesArena) {
+          paddlesArena.classList.add('has-photo');
+        }
+        if (judgePhotoWrapper) {
+          judgePhotoWrapper.classList.remove('hidden');
+        }
+        judgePhoto.src = photoParam;
+        
+        setTimeout(() => {
+          playStageEntry();
+        }, 150);
+        return true;
+      } catch (err) {
+        console.error("Error reading shared photo parameter:", err);
+      }
+    }
+    return false;
+  };
+
+  const isShared = checkSharedPhoto();
+  if (!isShared) {
+    playIntroEntry();
+  } else {
+    gsap.set(screenIntro, { opacity: 0 });
+  }
 });
