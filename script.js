@@ -48,7 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const judgePhoto = document.getElementById('judge-photo');
   const judgePhotoWrapper = document.getElementById('judge-photo-wrapper');
   const btnGotoUpload = document.getElementById('btn-goto-upload');
+  const btnClearPhoto = document.getElementById('btn-clear-photo');
+  const btnShareJudge = document.getElementById('btn-share-judge');
   const hudButtonsContainer = document.getElementById('hud-buttons-container');
+  const shareModal = document.getElementById('share-modal');
+  const modalClose = document.getElementById('modal-close');
+  const qrCanvas = document.getElementById('qr-canvas');
+  const btnModalCopy = document.getElementById('btn-modal-copy');
+  const btnModalCopyText = document.getElementById('btn-modal-copy-text');
+  let currentShareUrl = '';
 
   // --- AUDIO SYNTH ENGINE (Web Audio API) ---
   const initAudio = () => {
@@ -592,6 +600,12 @@ document.addEventListener('DOMContentLoaded', () => {
           if (judgePhotoWrapper) {
             judgePhotoWrapper.classList.remove('hidden');
           }
+          if (btnClearPhoto) {
+            btnClearPhoto.classList.remove('hidden');
+          }
+          if (btnShareJudge) {
+            btnShareJudge.classList.remove('hidden');
+          }
           judgePhoto.src = storedPhoto;
         } else {
           if (paddlesArena) {
@@ -599,6 +613,12 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           if (judgePhotoWrapper) {
             judgePhotoWrapper.classList.add('hidden');
+          }
+          if (btnClearPhoto) {
+            btnClearPhoto.classList.add('hidden');
+          }
+          if (btnShareJudge) {
+            btnShareJudge.classList.add('hidden');
           }
         }
 
@@ -953,9 +973,15 @@ document.addEventListener('DOMContentLoaded', () => {
         statusText.classList.add('pulse-alpha');
         verdictOverlay.classList.remove('active');
 
-        // Hide photo wrapper permanently
+        // Hide photo wrapper and control buttons permanently
         if (judgePhotoWrapper) {
           judgePhotoWrapper.classList.add('hidden');
+        }
+        if (btnClearPhoto) {
+          btnClearPhoto.classList.add('hidden');
+        }
+        if (btnShareJudge) {
+          btnShareJudge.classList.add('hidden');
         }
 
         // Restart float loops
@@ -1164,29 +1190,90 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnShareLink) {
     setupResetBtnHovers(btnShareLink, false);
     setupResetBtnHovers(btnProceed, true);
+    if (btnModalCopy) {
+      setupResetBtnHovers(btnModalCopy, true);
+    }
 
     btnShareLink.addEventListener('click', () => {
       const base64Data = localStorage.getItem('food_photo');
       if (base64Data) {
-        // Use a hash parameter (#photo=) so the data is client-side only and never sent to the server (prevents HTTP 431)
+        playSound('swipe');
+        triggerHaptic(40);
+
+        // Build client-side fragment URL
         const shareUrl = window.location.origin + window.location.pathname + '#photo=' + encodeURIComponent(base64Data);
-        
-        navigator.clipboard.writeText(shareUrl).then(() => {
+        currentShareUrl = shareUrl;
+
+        // Generate QR Code dynamically
+        if (window.QRious && qrCanvas) {
+          try {
+            new QRious({
+              element: qrCanvas,
+              value: shareUrl,
+              size: 250,
+              background: '#ffffff',
+              foreground: '#0a0a0c',
+              level: 'M'
+            });
+          } catch (qrErr) {
+            console.error("QR Code generation error:", qrErr);
+          }
+        }
+
+        // Open Modal
+        if (shareModal) {
+          shareModal.classList.add('active');
+        }
+      }
+    });
+  }
+
+  // --- MODAL ACTION BINDINGS ---
+  if (btnModalCopy) {
+    btnModalCopy.addEventListener('click', () => {
+      if (currentShareUrl) {
+        navigator.clipboard.writeText(currentShareUrl).then(() => {
           playSound('correct');
-          triggerHaptic([50, 50]);
-          
-          // Visual feedback on button
-          btnShareText.innerText = "COPIED!";
-          setTimeout(() => {
-            btnShareText.innerText = "SHARE LINK";
-          }, 2000);
+          triggerHaptic([40, 40]);
+
+          if (btnModalCopyText) {
+            btnModalCopyText.innerText = "COPIED!";
+            setTimeout(() => {
+              btnModalCopyText.innerText = "COPY LINK";
+            }, 2000);
+          }
         }).catch((err) => {
-          console.error("Failed to copy URL:", err);
-          alert("Could not copy link automatically. Please copy the page URL.");
+          console.error("Copy failed:", err);
+          alert("Unable to copy automatically. Please copy the URL from address bar.");
         });
       }
     });
   }
+
+  // Close modal helper
+  const closeModal = () => {
+    if (shareModal) {
+      shareModal.classList.remove('active');
+    }
+  };
+
+  if (modalClose) {
+    modalClose.addEventListener('click', closeModal);
+  }
+
+  if (shareModal) {
+    shareModal.addEventListener('click', (e) => {
+      if (e.target === shareModal) {
+        closeModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
 
   // --- PROCEED TO JUDGING ---
   if (btnProceed) {
@@ -1208,6 +1295,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (judgePhotoWrapper) {
               judgePhotoWrapper.classList.remove('hidden');
             }
+            if (btnClearPhoto) {
+              btnClearPhoto.classList.remove('hidden');
+            }
+            if (btnShareJudge) {
+              btnShareJudge.classList.remove('hidden');
+            }
             judgePhoto.src = storedPhoto;
           } else {
             if (paddlesArena) {
@@ -1215,6 +1308,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (judgePhotoWrapper) {
               judgePhotoWrapper.classList.add('hidden');
+            }
+            if (btnClearPhoto) {
+              btnClearPhoto.classList.add('hidden');
+            }
+            if (btnShareJudge) {
+              btnShareJudge.classList.add('hidden');
             }
           }
           
@@ -1265,6 +1364,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --- CLEAR/DISCARD PHOTO FROM JUDGING STAGE ---
+  if (btnClearPhoto) {
+    btnClearPhoto.addEventListener('click', () => {
+      playSound('reset');
+      triggerHaptic(30);
+
+      // Clear from storage
+      localStorage.removeItem('food_photo');
+
+      // Revert layout styles dynamically with smooth transitions
+      if (paddlesArena) {
+        paddlesArena.classList.remove('has-photo');
+      }
+
+      // Hide card wrapper and the controls
+      if (judgePhotoWrapper) {
+        judgePhotoWrapper.classList.add('hidden');
+      }
+      btnClearPhoto.classList.add('hidden');
+      if (btnShareJudge) {
+        btnShareJudge.classList.add('hidden');
+      }
+    });
+  }
+
+  // --- SHARE LINK FROM JUDGING STAGE HUD ---
+  if (btnShareJudge) {
+    setupResetBtnHovers(btnShareJudge, false);
+
+    btnShareJudge.addEventListener('click', () => {
+      const base64Data = localStorage.getItem('food_photo');
+      if (base64Data) {
+        playSound('swipe');
+        triggerHaptic(40);
+
+        // Build client-side fragment URL
+        const shareUrl = window.location.origin + window.location.pathname + '#photo=' + encodeURIComponent(base64Data);
+        currentShareUrl = shareUrl;
+
+        // Generate QR Code dynamically
+        if (window.QRious && qrCanvas) {
+          try {
+            new QRious({
+              element: qrCanvas,
+              value: shareUrl,
+              size: 250,
+              background: '#ffffff',
+              foreground: '#0a0a0c',
+              level: 'M'
+            });
+          } catch (qrErr) {
+            console.error("QR Code generation error:", qrErr);
+          }
+        }
+
+        // Open Modal
+        if (shareModal) {
+          shareModal.classList.add('active');
+        }
+      }
+    });
+  }
+
   // --- CHECK SHARED LINK ON INITIAL LOAD ---
   const checkSharedPhoto = () => {
     const hash = window.location.hash;
@@ -1286,6 +1448,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (judgePhotoWrapper) {
           judgePhotoWrapper.classList.remove('hidden');
+        }
+        if (btnClearPhoto) {
+          btnClearPhoto.classList.remove('hidden');
         }
         judgePhoto.src = photoParam;
         

@@ -284,6 +284,23 @@
               <div class="btn-sheen"></div>
               <div class="btn-glow-soft"></div>
             </button>
+            <button class="btn-secondary btn-upload-hud hidden" id="btn-share-judge" aria-label="Share Link">
+              <span class="btn-bracket tl"></span>
+              <span class="btn-bracket tr"></span>
+              <span class="btn-bracket bl"></span>
+              <span class="btn-bracket br"></span>
+              <span class="btn-text">SHARE LINK</span>
+              <span class="btn-subtext">COPY LINK</span>
+              <div class="btn-sheen"></div>
+              <div class="btn-glow-soft"></div>
+            </button>
+            <button class="btn-icon-hud hidden" id="btn-clear-photo" aria-label="Clear Photo" title="Clear Photo">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 4v6h-6" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              <div class="btn-glow-soft"></div>
+            </button>
           </div>
           <p class="judge-instructions" id="judge-instructions">Tap a paddle to cast judgment</p>
         </footer>
@@ -292,6 +309,33 @@
     </main>
   </div>
 
+  <!-- Share Link Modal -->
+  <div class="modal-overlay" id="share-modal">
+    <div class="modal-card">
+      <button class="modal-close" id="modal-close" aria-label="Close Modal">&times;</button>
+      <h3 class="modal-title">SHARE LINK</h3>
+      <div class="modal-divider"></div>
+      <p class="modal-subtitle">Scan to open on another device</p>
+      
+      <div class="qr-container">
+        <canvas id="qr-canvas"></canvas>
+      </div>
+      
+      <button class="btn-primary btn-modal-copy" id="btn-modal-copy" aria-label="Copy Link">
+        <span class="btn-bracket tl"></span>
+        <span class="btn-bracket tr"></span>
+        <span class="btn-bracket bl"></span>
+        <span class="btn-bracket br"></span>
+        <span class="btn-text" id="btn-modal-copy-text">COPY LINK</span>
+        <span class="btn-subtext">COPY TO CLIPBOARD</span>
+        <div class="btn-sheen"></div>
+        <div class="btn-glow"></div>
+      </button>
+    </div>
+  </div>
+
+  <!-- QRious QR Code Generator Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
   <!-- GSAP from CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <!-- Custom Logic -->
