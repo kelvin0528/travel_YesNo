@@ -2,8 +2,8 @@ import { Redis } from '@upstash/redis';
 
 // Initialize Upstash Redis from env vars (auto-set when you add Redis integration in Vercel)
 const redis = new Redis({
-  url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN,
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
 // Generate a short random ID (8 chars, alphanumeric)
